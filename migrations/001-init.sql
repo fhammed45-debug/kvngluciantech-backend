@@ -1,0 +1,75 @@
+-- Create database
+CREATE DATABASE IF NOT EXISTS my_backend;
+USE my_backend;
+
+
+-- USERS TABLE
+CREATE TABLE IF NOT EXISTS users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
+    is_verified TINYINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- SUBSCRIPTIONS TABLE (linked to user_id)
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    plan VARCHAR(100) NOT NULL,
+    status VARCHAR(50) DEFAULT 'active',
+    start_date DATE DEFAULT CURRENT_DATE,
+    end_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+
+-- PASSWORD RESETS (forgotten password)
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used TINYINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+
+-- EMAIL VERIFICATION TABLE (for signup Gmail verification)
+CREATE TABLE IF NOT EXISTS email_verification (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    verification_code VARCHAR(10) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used TINYINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+
+-- PRODUCTS TABLE
+CREATE TABLE IF NOT EXISTS products (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- ORDERS TABLE
+CREATE TABLE IF NOT EXISTS orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+);
