@@ -1,16 +1,10 @@
-// Sync database and start server
 async function startServer() {
   try {
-    // Test database connection
     await sequelize.authenticate();
     console.log('✅ Database connection successful');
     
-    // Drop all tables first
-    await sequelize.drop();
-    console.log('✅ Tables dropped');
-    
-    // Recreate tables with proper defaults
-    await sequelize.sync({ force: true });
+    // Simple sync - will create tables if they don't exist
+    await sequelize.sync();
     console.log('✅ Database models synced');
     
     // Start server
