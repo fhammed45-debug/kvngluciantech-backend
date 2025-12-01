@@ -84,7 +84,7 @@ const authController = {
       // ===== CREATE USER =====
       // FIXED: Added created_at with NOW()
       const [result] = await db.query(
-        'INSERT INTO users (email, password, name, is_verified, created_at) VALUES (?, ?, ?, ?, NOW())',
+        'INSERT INTO users (email, password, name, is_verified, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
         [email.toLowerCase().trim(), hashedPassword, name || '', 0]
       );
 
