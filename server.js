@@ -132,7 +132,7 @@ async function startServer() {
     console.log('✅ Database connection successful');
     
     // Sync models (don't drop tables on restart)
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: false });
     console.log('✅ Database models synced');
     
     // Start server
