@@ -82,8 +82,9 @@ const authController = {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // ===== CREATE USER =====
+      // FIXED: Added created_at with NOW()
       const [result] = await db.query(
-        'INSERT INTO users (email, password, name, is_verified) VALUES (?, ?, ?, ?)',
+        'INSERT INTO users (email, password, name, is_verified, created_at) VALUES (?, ?, ?, ?, NOW())',
         [email.toLowerCase().trim(), hashedPassword, name || '', 0]
       );
 
