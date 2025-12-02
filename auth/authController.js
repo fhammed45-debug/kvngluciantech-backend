@@ -1,12 +1,13 @@
 // ============================================
 // auth/authController.js
-// Complete Authentication Controller (FIXED)
+// Complete Authentication Controller (FIXED WITH SEQUELIZE)
 // ============================================
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { User, EmailVerification, PasswordReset } = require('../models');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailService');
+const { Op } = require('sequelize');
 
 // ============================================
 // HELPER FUNCTIONS
@@ -27,7 +28,7 @@ const generateToken = (user) => {
       name: user.name
     },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' } // Token expires in 7 days
+    { expiresIn: '7d' }
   );
 };
 
@@ -67,12 +68,11 @@ const authController = {
       }
 
       // ===== CHECK IF USER EXISTS =====
-      const [existingUser] = await db.query(
-        'SELECT id, email FROM users WHERE email = ?', 
-        [email.toLowerCase().trim()]
-      );
+      const existingUser = await User.findOne({
+        where: { email: email.toLowerCase().trim() }
+      });
 
-      if (existingUser.length > 0) {
+      if (existingUser) {
         return res.status(400).json({ 
           error: 'An account with this email already exists' 
         });
@@ -82,23 +82,23 @@ const authController = {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // ===== CREATE USER =====
-      // FIXED: Added created_at with NOW()
-      const [result] = await db.query(
-        'INSERT INTO users (email, password, name, is_verified, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
-        [email.toLowerCase().trim(), hashedPassword, name || '', 0]
-      );
-
-      const userId = result.insertId;
+      const user = await User.create({
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        name: name || '',
+        is_verified: false
+      });
 
       // ===== GENERATE VERIFICATION CODE =====
       const verificationCode = generateVerificationCode();
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      // FIXED: Changed verification_code to token, used to is_used
-      await db.query(
-        'INSERT INTO email_verification (user_id, token, expires_at, is_used) VALUES (?, ?, ?, ?)',
-        [userId, verificationCode, expiresAt, 0]
-      );
+      await EmailVerification.create({
+        user_id: user.id,
+        token: verificationCode,
+        expires_at: expiresAt,
+        is_used: false
+      });
 
       // ===== SEND VERIFICATION EMAIL =====
       try {
@@ -106,7 +106,6 @@ const authController = {
         console.log(`✅ Verification email sent to ${email}`);
       } catch (emailError) {
         console.error('❌ Failed to send verification email:', emailError.message);
-        // Don't fail registration if email fails
       }
 
       // ===== RESPONSE =====
@@ -114,9 +113,9 @@ const authController = {
         success: true,
         message: 'Registration successful! Please check your email for a verification code.',
         data: {
-          userId: userId,
-          email: email.toLowerCase().trim(),
-          name: name || ''
+          userId: user.id,
+          email: user.email,
+          name: user.name
         }
       });
 
@@ -141,18 +140,15 @@ const authController = {
       }
 
       // ===== FIND USER =====
-      const [users] = await db.query(
-        'SELECT * FROM users WHERE email = ?', 
-        [email.toLowerCase().trim()]
-      );
+      const user = await User.findOne({
+        where: { email: email.toLowerCase().trim() }
+      });
 
-      if (users.length === 0) {
+      if (!user) {
         return res.status(401).json({ 
           error: 'Invalid email or password' 
         });
       }
-
-      const user = users[0];
 
       // ===== CHECK EMAIL VERIFICATION =====
       if (!user.is_verified) {
@@ -216,18 +212,15 @@ const authController = {
       }
 
       // ===== FIND USER =====
-      const [users] = await db.query(
-        'SELECT * FROM users WHERE email = ?', 
-        [email.toLowerCase().trim()]
-      );
+      const user = await User.findOne({
+        where: { email: email.toLowerCase().trim() }
+      });
 
-      if (users.length === 0) {
+      if (!user) {
         return res.status(404).json({ 
           error: 'User not found' 
         });
       }
-
-      const user = users[0];
 
       // ===== CHECK IF ALREADY VERIFIED =====
       if (user.is_verified) {
@@ -237,37 +230,27 @@ const authController = {
       }
 
       // ===== VERIFY CODE =====
-      // FIXED: Changed verification_code to token, used to is_used
-      const [verifications] = await db.query(
-        `SELECT * FROM email_verification 
-         WHERE user_id = ? 
-         AND token = ? 
-         AND is_used = 0 
-         AND expires_at > NOW() 
-         ORDER BY created_at DESC 
-         LIMIT 1`,
-        [user.id, code]
-      );
+      const verification = await EmailVerification.findOne({
+        where: {
+          user_id: user.id,
+          token: code,
+          is_used: false,
+          expires_at: { [Op.gt]: new Date() }
+        },
+        order: [['created_at', 'DESC']]
+      });
 
-      if (verifications.length === 0) {
+      if (!verification) {
         return res.status(400).json({ 
           error: 'Invalid or expired verification code' 
         });
       }
 
       // ===== UPDATE USER =====
-      await db.query(
-        'UPDATE users SET is_verified = 1 WHERE id = ?', 
-        [user.id]
-      );
+      await user.update({ is_verified: true });
+      await verification.update({ is_used: true });
 
-      // FIXED: Changed used to is_used
-      await db.query(
-        'UPDATE email_verification SET is_used = 1 WHERE id = ?', 
-        [verifications[0].id]
-      );
-
-      // ===== GENERATE TOKEN (auto-login after verification) =====
+      // ===== GENERATE TOKEN =====
       const token = generateToken(user);
 
       // ===== RESPONSE =====
@@ -304,18 +287,15 @@ const authController = {
       }
 
       // ===== FIND USER =====
-      const [users] = await db.query(
-        'SELECT * FROM users WHERE email = ?', 
-        [email.toLowerCase().trim()]
-      );
+      const user = await User.findOne({
+        where: { email: email.toLowerCase().trim() }
+      });
 
-      if (users.length === 0) {
+      if (!user) {
         return res.status(404).json({ 
           error: 'User not found' 
         });
       }
-
-      const user = users[0];
 
       // ===== CHECK IF ALREADY VERIFIED =====
       if (user.is_verified) {
@@ -325,21 +305,21 @@ const authController = {
       }
 
       // ===== MARK OLD CODES AS USED =====
-      // FIXED: Changed used to is_used
-      await db.query(
-        'UPDATE email_verification SET is_used = 1 WHERE user_id = ?', 
-        [user.id]
+      await EmailVerification.update(
+        { is_used: true },
+        { where: { user_id: user.id } }
       );
 
       // ===== GENERATE NEW CODE =====
       const verificationCode = generateVerificationCode();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      // FIXED: Changed verification_code to token, used to is_used
-      await db.query(
-        'INSERT INTO email_verification (user_id, token, expires_at, is_used) VALUES (?, ?, ?, ?)',
-        [user.id, verificationCode, expiresAt, 0]
-      );
+      await EmailVerification.create({
+        user_id: user.id,
+        token: verificationCode,
+        expires_at: expiresAt,
+        is_used: false
+      });
 
       // ===== SEND EMAIL =====
       try {
@@ -379,26 +359,22 @@ const authController = {
       }
 
       // ===== FIND USER =====
-      const [users] = await db.query(
-        'SELECT * FROM users WHERE email = ?', 
-        [email.toLowerCase().trim()]
-      );
+      const user = await User.findOne({
+        where: { email: email.toLowerCase().trim() }
+      });
 
       // Security: Don't reveal if user exists
-      if (users.length === 0) {
+      if (!user) {
         return res.json({
           success: true,
           message: 'If an account with that email exists, a password reset link has been sent.'
         });
       }
 
-      const user = users[0];
-
       // ===== MARK OLD TOKENS AS USED =====
-      // FIXED: Changed used to is_used
-      await db.query(
-        'UPDATE password_resets SET is_used = 1 WHERE user_id = ?', 
-        [user.id]
+      await PasswordReset.update(
+        { is_used: true },
+        { where: { user_id: user.id } }
       );
 
       // ===== GENERATE RESET TOKEN =====
@@ -408,13 +384,14 @@ const authController = {
         { expiresIn: '1h' }
       );
 
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-      // FIXED: Changed used to is_used
-      await db.query(
-        'INSERT INTO password_resets (user_id, token, expires_at, is_used) VALUES (?, ?, ?, ?)',
-        [user.id, resetToken, expiresAt, 0]
-      );
+      await PasswordReset.create({
+        user_id: user.id,
+        token: resetToken,
+        expires_at: expiresAt,
+        is_used: false
+      });
 
       // ===== SEND EMAIL =====
       try {
@@ -473,37 +450,30 @@ const authController = {
       }
 
       // ===== CHECK TOKEN IN DATABASE =====
-      // FIXED: Changed used to is_used
-      const [resets] = await db.query(
-        `SELECT * FROM password_resets 
-         WHERE token = ? 
-         AND is_used = 0 
-         AND expires_at > NOW()`,
-        [token]
-      );
+      const reset = await PasswordReset.findOne({
+        where: {
+          token: token,
+          is_used: false,
+          expires_at: { [Op.gt]: new Date() }
+        }
+      });
 
-      if (resets.length === 0) {
+      if (!reset) {
         return res.status(400).json({ 
           error: 'Invalid or expired reset token' 
         });
       }
 
-      const reset = resets[0];
-
       // ===== HASH NEW PASSWORD =====
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // ===== UPDATE PASSWORD =====
-      await db.query(
-        'UPDATE users SET password = ? WHERE id = ?', 
-        [hashedPassword, reset.user_id]
+      await User.update(
+        { password: hashedPassword },
+        { where: { id: reset.user_id } }
       );
 
-      // FIXED: Changed used to is_used
-      await db.query(
-        'UPDATE password_resets SET is_used = 1 WHERE id = ?', 
-        [reset.id]
-      );
+      await reset.update({ is_used: true });
 
       // ===== RESPONSE =====
       res.json({
@@ -522,16 +492,14 @@ const authController = {
   // ==================== GET CURRENT USER ====================
   getCurrentUser: async (req, res) => {
     try {
-      // req.user is set by authMiddleware
       const userId = req.user.userId;
 
       // ===== FETCH USER =====
-      const [users] = await db.query(
-        'SELECT id, email, name, is_verified, created_at FROM users WHERE id = ?',
-        [userId]
-      );
+      const user = await User.findByPk(userId, {
+        attributes: ['id', 'email', 'name', 'is_verified', 'created_at']
+      });
 
-      if (users.length === 0) {
+      if (!user) {
         return res.status(404).json({ 
           error: 'User not found' 
         });
@@ -540,7 +508,7 @@ const authController = {
       // ===== RESPONSE =====
       res.json({
         success: true,
-        user: users[0]
+        user: user
       });
 
     } catch (error) {
@@ -577,18 +545,13 @@ const authController = {
       }
 
       // ===== GET USER =====
-      const [users] = await db.query(
-        'SELECT * FROM users WHERE id = ?', 
-        [userId]
-      );
+      const user = await User.findByPk(userId);
 
-      if (users.length === 0) {
+      if (!user) {
         return res.status(404).json({ 
           error: 'User not found' 
         });
       }
-
-      const user = users[0];
 
       // ===== VERIFY CURRENT PASSWORD =====
       const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
@@ -603,10 +566,7 @@ const authController = {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // ===== UPDATE PASSWORD =====
-      await db.query(
-        'UPDATE users SET password = ? WHERE id = ?', 
-        [hashedPassword, userId]
-      );
+      await user.update({ password: hashedPassword });
 
       // ===== RESPONSE =====
       res.json({
@@ -625,10 +585,6 @@ const authController = {
   // ==================== LOGOUT ====================
   logout: async (req, res) => {
     try {
-      // With JWT, logout is mainly handled on the client side
-      // by removing the token from storage
-      // This endpoint exists for consistency and future enhancements
-      
       res.json({
         success: true,
         message: 'Logout successful'
