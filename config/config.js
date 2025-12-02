@@ -1,16 +1,23 @@
-require("dotenv").config();
+require('dotenv').config();
 
 module.exports = {
-  port: process.env.PORT || 5000,
+  development: {
+    username: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    host: process.env.MYSQLHOST,
+    port: process.env.MYSQLPORT,
+    dialect: 'mysql',
+    logging: false
+  },
 
-  databaseUrl: process.env.DATABASE_URL, 
-
-  jwtSecret: process.env.JWT_SECRET,
-
-  emailUser: process.env.EMAIL_USER,
-  emailPassword: process.env.EMAIL_PASSWORD,
-
-  frontendUrl: process.env.FRONTEND_URL,
-
-  nodeEnv: process.env.NODE_ENV || "development",
+  production: {
+    username: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    host: process.env.MYSQLHOST,
+    port: process.env.MYSQLPORT,
+    dialect: 'mysql',
+    logging: false
+  }
 };
