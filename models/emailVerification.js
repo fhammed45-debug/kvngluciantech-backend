@@ -15,19 +15,19 @@ const EmailVerification = sequelize.define('EmailVerification', {
       key: 'id'
     }
   },
- verification_code: {
-  type: DataTypes.STRING(255),
-  allowNull: false,
-  unique: true
-},
+  token: {  // CHANGED FROM verification_code
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    unique: true
+  },
   expires_at: {
     type: DataTypes.DATE,
     allowNull: false
   },
- used: {
-  type: DataTypes.BOOLEAN,
-  defaultValue: false
-}
+  is_used: {  // CHANGED FROM used
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  }
 }, {
   tableName: 'email_verification',
   timestamps: true,
