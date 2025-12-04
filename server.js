@@ -17,9 +17,29 @@ const { sequelize } = require('./models');
 // MIDDLEWARE
 // ============================================
 
-// CORS Configuration
+// CORS Configuration - Updated to allow all Vercel domains
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://kvngluciantech-7exg.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean); // Remove any undefined values
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is in the allowed list OR is a Vercel preview URL
+    const isAllowed = allowedOrigins.includes(origin) || 
+                     (origin.includes('kvngluciantech') && origin.includes('vercel.app'));
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
