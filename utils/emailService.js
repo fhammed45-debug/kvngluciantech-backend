@@ -1,29 +1,22 @@
 // ============================================
 // utils/emailService.js
-// Email Service using Nodemailer (FIXED)
+// Email Service using SendGrid
 // ============================================
 
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
-// Validate email configuration on startup
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-  console.error('❌ EMAIL_USER or EMAIL_PASSWORD not set in environment variables');
+// Validate SendGrid API key on startup
+if (!process.env.SENDGRID_API_KEY) {
+  console.error('❌ SENDGRID_API_KEY not set in environment variables');
+} else {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log('✅ SendGrid API key configured');
 }
 
-// Create email transporter with better configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD // This should be your Gmail App Password
-  },
-  // Add these options for better reliability
-  tls: {
-    rejectUnauthorized: false
-  },
-  debug: true, // Enable debug output
-  logger: true // Log information to console
-});
+// Validate sender email
+if (!process.env.EMAIL_USER) {
+  console.error('❌ EMAIL_USER not set in environment variables');
+}
 
 // ============================================
 // SEND VERIFICATION EMAIL
@@ -32,13 +25,11 @@ const sendVerificationEmail = async (email, code) => {
   try {
     console.log(`📧 Attempting to send verification email to: ${email}`);
     
-    const mailOptions = {
-      from: {
-        name: 'Your App Name',
-        address: process.env.EMAIL_USER
-      },
+    const msg = {
       to: email,
+      from: process.env.EMAIL_USER, // Must be verified in SendGrid
       subject: 'Email Verification Code',
+      text: `Your verification code is: ${code}. This code will expire in 24 hours.`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -105,21 +96,15 @@ const sendVerificationEmail = async (email, code) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Verification email sent successfully:', info.messageId);
-    console.log('📬 Preview URL:', nodemailer.getTestMessageUrl(info));
-    return info;
+    await sgMail.send(msg);
+    console.log('✅ Verification email sent successfully to:', email);
+    return { success: true };
   } catch (error) {
     console.error('❌ Error sending verification email:', error.message);
     
     // Detailed error logging
-    if (error.code === 'EAUTH') {
-      console.error('🔐 Authentication failed. Please check:');
-      console.error('   1. EMAIL_USER is correct');
-      console.error('   2. EMAIL_PASSWORD is a Gmail App Password (not regular password)');
-      console.error('   3. 2FA is enabled on your Google account');
-    } else if (error.code === 'ECONNECTION') {
-      console.error('🌐 Connection failed. Check your internet connection.');
+    if (error.response) {
+      console.error('SendGrid Error Response:', error.response.body);
     }
     
     throw new Error(`Failed to send verification email: ${error.message}`);
@@ -135,13 +120,11 @@ const sendPasswordResetEmail = async (email, token) => {
     
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
     
-    const mailOptions = {
-      from: {
-        name: 'Your App Name',
-        address: process.env.EMAIL_USER
-      },
+    const msg = {
       to: email,
+      from: process.env.EMAIL_USER, // Must be verified in SendGrid
       subject: 'Password Reset Request',
+      text: `You requested a password reset. Click this link to reset your password: ${resetUrl}. This link will expire in 1 hour.`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -211,15 +194,14 @@ const sendPasswordResetEmail = async (email, token) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Password reset email sent successfully:', info.messageId);
-    console.log('📬 Preview URL:', nodemailer.getTestMessageUrl(info));
-    return info;
+    await sgMail.send(msg);
+    console.log('✅ Password reset email sent successfully to:', email);
+    return { success: true };
   } catch (error) {
     console.error('❌ Error sending password reset email:', error.message);
     
-    if (error.code === 'EAUTH') {
-      console.error('🔐 Authentication failed. Check your Gmail App Password.');
+    if (error.response) {
+      console.error('SendGrid Error Response:', error.response.body);
     }
     
     throw new Error(`Failed to send password reset email: ${error.message}`);
@@ -227,23 +209,31 @@ const sendPasswordResetEmail = async (email, token) => {
 };
 
 // ============================================
-// TEST EMAIL CONNECTION
+// TEST EMAIL CONNECTION (SendGrid)
 // ============================================
 const testEmailConnection = async () => {
   try {
-    console.log('🔍 Testing email service connection...');
-    await transporter.verify();
-    console.log('✅ Email service is ready and authenticated');
+    console.log('🔍 Testing SendGrid connection...');
+    
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY is not set');
+    }
+    
+    if (!process.env.EMAIL_USER) {
+      throw new Error('EMAIL_USER is not set');
+    }
+    
+    console.log('✅ SendGrid configuration looks good');
+    console.log('📧 Sender email:', process.env.EMAIL_USER);
+    console.log('⚠️  Make sure this email is verified in SendGrid!');
+    
     return true;
   } catch (error) {
-    console.error('❌ Email service connection failed:', error.message);
-    
-    if (error.code === 'EAUTH') {
-      console.error('🔐 Gmail authentication failed. Please ensure:');
-      console.error('   1. You are using a Gmail App Password (not your regular password)');
-      console.error('   2. 2-Factor Authentication is enabled on your Google account');
-      console.error('   3. Go to: https://myaccount.google.com/apppasswords');
-    }
+    console.error('❌ SendGrid configuration check failed:', error.message);
+    console.error('📝 Please ensure:');
+    console.error('   1. SENDGRID_API_KEY is set in environment variables');
+    console.error('   2. EMAIL_USER is set and verified in SendGrid');
+    console.error('   3. Go to: https://app.sendgrid.com/settings/sender_auth/senders');
     
     return false;
   }
