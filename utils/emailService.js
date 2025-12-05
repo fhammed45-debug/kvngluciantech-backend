@@ -119,6 +119,8 @@ const sendPasswordResetEmail = async (email, token) => {
     console.log(`📧 Attempting to send password reset email to: ${email}`);
     
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    console.log('🔗 Generated reset URL:', resetUrl);
+console.log('🌐 FRONTEND_URL value:', process.env.FRONTEND_URL);
     
     const msg = {
       to: email,
