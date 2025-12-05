@@ -129,76 +129,54 @@ const sendPasswordResetEmail = async (email, token) => {
         <!DOCTYPE html>
         <html>
         <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background-color: #f44336;
-              color: white;
-              padding: 20px;
-              text-align: center;
-            }
-            .content {
-              background-color: #f4f4f4;
-              padding: 20px;
-              border-radius: 5px;
-              margin-top: 20px;
-            }
-            .button {
-              display: inline-block;
-              padding: 12px 30px;
-              background-color: #f44336;
-              color: white;
-              text-decoration: none;
-              border-radius: 5px;
-              margin: 20px 0;
-            }
-            .footer {
-              margin-top: 20px;
-              text-align: center;
-              color: #666;
-              font-size: 12px;
-            }
-          </style>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Password Reset Request</h1>
-            </div>
-            <div class="content">
-              <p>Hello,</p>
-              <p>You requested a password reset for your account. Click the button below to reset your password:</p>
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0;">
-                <tr>
-                  <td align="center">
-                    <table border="0" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="center" style="border-radius: 5px; background-color: #f44336;">
-                          <a href="${resetUrl}" target="_blank" style="font-size: 16px; font-family: Arial, sans-serif; color: #ffffff; text-decoration: none; border-radius: 5px; padding: 15px 40px; border: 1px solid #f44336; display: inline-block; font-weight: bold;">Reset Password</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              <p>Or copy and paste this link into your browser:</p>
-              <p style="word-break: break-all; color: #0066cc;">${resetUrl}</p>
-              <p><strong>This link will expire in 1 hour.</strong></p>
-              <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
-            </div>
-            <div class="footer">
-              <p>This is an automated email, please do not reply.</p>
-            </div>
-          </div>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+                  <!-- Header -->
+                  <tr>
+                    <td style="background-color: #f44336; padding: 30px; text-align: center;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Password Reset Request</h1>
+                    </td>
+                  </tr>
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <p style="margin: 0 0 20px 0; font-size: 16px;">Hello,</p>
+                      <p style="margin: 0 0 30px 0; font-size: 16px;">You requested a password reset for your account. Click the button below to reset your password:</p>
+                      
+                      <!-- Button -->
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td align="center" style="padding: 20px 0;">
+                            <a href="${resetUrl}" target="_blank" style="background-color: #f44336; color: #ffffff; padding: 16px 48px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; display: inline-block;">Reset Password</a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <p style="margin: 30px 0 10px 0; font-size: 14px; color: #666;">Or copy and paste this link into your browser:</p>
+                      <p style="margin: 0 0 30px 0; word-break: break-all;">
+                        <a href="${resetUrl}" style="color: #0066cc; text-decoration: underline;">${resetUrl}</a>
+                      </p>
+                      
+                      <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>This link will expire in 1 hour.</strong></p>
+                      <p style="margin: 0; font-size: 14px; color: #666;">If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
+                    </td>
+                  </tr>
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f4f4f4; padding: 20px; text-align: center;">
+                      <p style="margin: 0; font-size: 12px; color: #999;">This is an automated email, please do not reply.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `
