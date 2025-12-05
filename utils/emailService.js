@@ -177,9 +177,19 @@ const sendPasswordResetEmail = async (email, token) => {
             <div class="content">
               <p>Hello,</p>
               <p>You requested a password reset for your account. Click the button below to reset your password:</p>
-              <div style="text-align: center;">
-                <a href="${resetUrl}" style="display: inline-block; padding: 15px 40px; background-color: #f44336; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; font-size: 16px; text-align: center;">Reset Password</a>
-              </div>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0;">
+                <tr>
+                  <td align="center">
+                    <table border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td align="center" style="border-radius: 5px; background-color: #f44336;">
+                          <a href="${resetUrl}" target="_blank" style="font-size: 16px; font-family: Arial, sans-serif; color: #ffffff; text-decoration: none; border-radius: 5px; padding: 15px 40px; border: 1px solid #f44336; display: inline-block; font-weight: bold;">Reset Password</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
               <p>Or copy and paste this link into your browser:</p>
               <p style="word-break: break-all; color: #0066cc;">${resetUrl}</p>
               <p><strong>This link will expire in 1 hour.</strong></p>
